@@ -101,13 +101,11 @@ img { max-width: 100%; }
 }
 
 .sidebar-logo {
-  padding: 20px 20px 16px;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
+  display: none;
 }
 
 .sidebar-logo img {
-  height: 36px;
-  filter: brightness(0) invert(1);
+  display: none;
 }
 
 .sidebar-tournament {
@@ -3473,11 +3471,15 @@ SPA.pages["ranking"]={style:``,script:function(){
       '</div>';
   }
 
-  render();
+  (async function(){
+    if (window.syncBetsFromSupabase) await window.syncBetsFromSupabase();
+    render();
+  })();
   var _ri = setInterval(function(){
     if (SPA.current !== 'ranking') { clearInterval(_ri); return; }
-    render();
-  }, 15000);
+    if (window.syncBetsFromSupabase) window.syncBetsFromSupabase().then(render);
+    else render();
+  }, 30000);
 })();
 
 
