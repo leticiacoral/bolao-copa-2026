@@ -3063,8 +3063,6 @@ SPA.pages["apostas"]={style:`.phase-section { margin-bottom: 28px; }
   var user = Auth.user;
   var currentFilter = 'all';
 
-  function getPC() { return document.getElementById('pageContent'); }
-
   function render() {
     var games = DB.getGames().slice().sort(function(a,b){
       return new Date(a.date).getTime() - new Date(b.date).getTime();
@@ -3139,43 +3137,161 @@ SPA.pages["apostas"]={style:`.phase-section { margin-bottom: 28px; }
 
     pc.innerHTML = h;
 
+    // Event delegation — guard prevents accumulation on re-render
+    if (!pc._hasBetListener) {
+      pc._hasBetListener = true;
+      pc.addEventListener('click', function(e){
+      // Filter buttons
+      var fb = e.target.closest('[data-betfilter]');
+      if (fb) { currentFilter = fb.getAttribute('data-betfilter'); render(); return; }
+
+      // Score buttons + and -
+      var sb = e.target.closest('[data-score]');
+      if (sb) {
+        var info = sb.getAttribute('data-score').split('|');
+        var gameId=info[0], side=info[1], delta=parseInt(info[2]);
+        var inp = document.getElementById('score-'+side+'-'+gameId);
+        if (inp) { inp.value = Math.max(0, Math.min(20, (parseInt(inp.value)||0)+delta)); }
+        return;
+      }
+
+      // Save bet button
+      var saveBtn = e.target.closest('[data-savebet]');
+      if (saveBtn) {
+        var gameId = saveBtn.getAttribute('data-savebet');
+        var h_el = document.getElementById('score-home-'+gameId);
+        var a_el = document.getElementById('score-away-'+gameId);
+        if (!h_el||!a_el) return;
+        var hv=h_el.value, av=a_el.value;
+        if(hv===''||av===''){Utils.toast('Informe o placar completo!','error');return;}
+        var game = DB.getGames().find(function(g){return g.id===gameId;});
+        if(!game||!Utils.canBet(game)){Utils.toast('Apostas encerradas para este jogo.','error');return;}
+        DB.saveBet(user.id||user.email, gameId, {home_score:parseInt(hv),away_score:parseInt(av)});
+        Utils.toast('Aposta salva: '+game.home+' '+hv+'×'+av+' '+game.away+' ✓','success');
+        render();
+        return;
+      }
+      });
+    }
   }
 
-  // Store handler on window so removeEventListener works across re-renders
-  if (window._apostasHandler) {
-    document.removeEventListener('click', window._apostasHandler);
+  function sCard(label, val, color) {
+    return '<div style="background:white;border-radius:12px;border:1px solid #DDE1EE;padding:14px 16px;box-shadow:0 1px 3px rgba(27,43,107,.08);">' +
+      '<div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#9CA3BF;margin-bottom:4px;">'+label+'</div>' +
+      '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:1.7rem;font-weight:900;color:'+color+';line-height:1;">'+val+'</div>' +
+      '</div>';
   }
-  window._apostasHandler = function(e) {
-    if (SPA.current !== 'apostas') return;
-    var fb = e.target.closest('[data-betfilter]');
-    if (fb) { currentFilter = fb.getAttribute('data-betfilter'); render(); return; }
 
-    var sb = e.target.closest('[data-score]');
-    if (sb) {
-      var info = sb.getAttribute('data-score').split('|');
-      var gameId=info[0], side=info[1], delta=parseInt(info[2]);
-      var inp = document.getElementById('score-'+side+'-'+gameId);
-      if (inp) inp.value = Math.max(0, Math.min(20, (parseInt(inp.value)||0)+delta));
-      return;
+  function renderGameCard(game, bet) {
+    var canBet = Utils.canBet(game);
+    var isFinished = !!game.result;
+    var isTbd = game.tbd;
+    var hasBet = !!bet;
+
+    var borderColor = hasBet ? 'rgba(34,197,94,.4)' : '#DDE1EE';
+    var opacity = (!canBet && !hasBet && !isFinished) ? '.6' : '1';
+
+    var h = '<div style="background:white;border-radius:14px;border:1.5px solid '+borderColor+';box-shadow:0 1px 4px rgba(27,43,107,.07);overflow:hidden;opacity:'+opacity+';">';
+
+    // Card header
+    h += '<div style="background:#1B2B6B;padding:9px 14px;display:flex;align-items:center;justify-content:space-between;">';
+    h += '<div><div style="font-size:.65rem;color:rgba(255,255,255,.6);font-weight:600;text-transform:uppercase;">'+Utils.phaseName(game.phase)+(game.group?' · Grupo '+game.group:'')+'</div>';
+    h += '<div style="font-size:.65rem;color:rgba(255,255,255,.5);margin-top:1px;">'+(game.city||'')+'</div></div>';
+    h += '<div style="font-size:.72rem;color:rgba(255,255,255,.9);font-weight:600;">'+Utils.formatDateTime(game.date)+'</div>';
+    h += '</div>';
+
+    if (isTbd) {
+      h += '<div style="padding:16px 14px;text-align:center;">';
+      if (game.desc) {
+        h += '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:1rem;font-weight:800;color:#1B2B6B;margin-bottom:4px;">'+game.desc+'</div>';
+      }
+      h += '<div style="font-size:.78rem;color:#9CA3BF;margin-bottom:8px;">⏳ Confronto a definir após a fase de grupos</div>';
+      h += '<div style="display:flex;align-items:center;justify-content:center;gap:12px;font-size:.75rem;">';
+      h += '<span style="color:#5A6385;font-weight:600;">📅 '+Utils.formatDate(game.date)+'</span>';
+      h += '<span style="color:#5A6385;font-weight:600;">🕐 '+Utils.formatTime(game.date)+'</span>';
+      h += '<span style="color:#9CA3BF;">📍 '+game.city+'</span>';
+      h += '</div>';
+      h += '</div>';
+      h += '</div>'; return h;
     }
 
-    var saveBtn = e.target.closest('[data-savebet]');
-    if (saveBtn) {
-      var gameId = saveBtn.getAttribute('data-savebet');
-      var h_el = document.getElementById('score-home-'+gameId);
-      var a_el = document.getElementById('score-away-'+gameId);
-      if (!h_el||!a_el) return;
-      var hv=h_el.value, av=a_el.value;
-      if(hv===''||av===''){Utils.toast('Informe o placar completo!','error');return;}
-      var game = DB.getGames().find(function(g){return g.id===gameId;});
-      if(!game||!Utils.canBet(game)){Utils.toast('Apostas encerradas para este jogo.','error');return;}
-      DB.saveBet(user.email||user.id, gameId, {home_score:parseInt(hv),away_score:parseInt(av)});
-      Utils.toast('Aposta salva: '+game.home+' '+hv+'×'+av+' '+game.away+' ✓','success');
-      render();
-      return;
+    var hFlag = flag(game.home), aFlag = flag(game.away);
+
+    // Teams + score input
+    h += '<div style="padding:14px;">';
+    h += '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px;">';
+
+    // Home team
+    h += '<div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex:1;">';
+    h += '<div style="font-size:2rem;">'+hFlag+'</div>';
+    h += '<div style="font-size:.68rem;font-weight:700;text-transform:uppercase;text-align:center;color:#2D3557;">'+game.home+'</div>';
+    h += '</div>';
+
+    // Score area
+    h += '<div style="display:flex;flex-direction:column;align-items:center;gap:6px;">';
+    if (canBet) {
+      h += '<div style="display:flex;align-items:center;gap:8px;">';
+      // Home score ctrl
+      h += '<div style="display:flex;flex-direction:column;align-items:center;gap:3px;">';
+      h += '<div style="display:flex;gap:3px;">';
+      h += '<button data-score="'+game.id+'|home|1" style="width:22px;height:22px;background:#EEF0F6;border:none;border-radius:5px;cursor:pointer;font-size:.85rem;font-weight:700;">+</button>';
+      h += '<button data-score="'+game.id+'|home|-1" style="width:22px;height:22px;background:#EEF0F6;border:none;border-radius:5px;cursor:pointer;font-size:.85rem;font-weight:700;">−</button>';
+      h += '</div>';
+      h += '<input id="score-home-'+game.id+'" type="number" min="0" max="20" value="'+(bet?bet.home_score:'')+'" placeholder="0" ';
+      h += 'style="width:50px;height:50px;text-align:center;border:2px solid #DDE1EE;border-radius:10px;font-family:\'Barlow Condensed\',sans-serif;font-size:1.5rem;font-weight:900;color:#1B2B6B;outline:none;"/>';
+      h += '</div>';
+      h += '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:1.6rem;font-weight:900;color:#9CA3BF;">×</div>';
+      // Away score ctrl
+      h += '<div style="display:flex;flex-direction:column;align-items:center;gap:3px;">';
+      h += '<div style="display:flex;gap:3px;">';
+      h += '<button data-score="'+game.id+'|away|1" style="width:22px;height:22px;background:#EEF0F6;border:none;border-radius:5px;cursor:pointer;font-size:.85rem;font-weight:700;">+</button>';
+      h += '<button data-score="'+game.id+'|away|-1" style="width:22px;height:22px;background:#EEF0F6;border:none;border-radius:5px;cursor:pointer;font-size:.85rem;font-weight:700;">−</button>';
+      h += '</div>';
+      h += '<input id="score-away-'+game.id+'" type="number" min="0" max="20" value="'+(bet?bet.away_score:'')+'" placeholder="0" ';
+      h += 'style="width:50px;height:50px;text-align:center;border:2px solid #DDE1EE;border-radius:10px;font-family:\'Barlow Condensed\',sans-serif;font-size:1.5rem;font-weight:900;color:#1B2B6B;outline:none;"/>';
+      h += '</div>';
+      h += '</div>';
+    } else if (hasBet) {
+      h += '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:2rem;font-weight:900;color:#1B2B6B;">'+bet.home_score+' × '+bet.away_score+'</div>';
+      if (isFinished) {
+        var sc = Scoring.calculate(bet, {home_score:game.result.home_score,away_score:game.result.away_score,phase:game.phase});
+        h += '<div style="font-size:.72rem;font-weight:700;color:'+(sc.total>0?'#16A34A':'#DC2626')+';">'+(sc.total>0?'+'+sc.total+' pts':'Errou')+'</div>';
+      }
+    } else {
+      h += '<div style="font-size:1.8rem;opacity:.25;font-family:\'Barlow Condensed\',sans-serif;font-weight:900;">?×?</div>';
     }
-  };
-  document.addEventListener('click', window._apostasHandler);
+    if (isFinished) {
+      h += '<div style="font-size:.65rem;color:#9CA3BF;margin-top:2px;">Resultado: '+game.result.home_score+'×'+game.result.away_score+'</div>';
+    }
+    h += '</div>';
+
+    // Away team
+    h += '<div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex:1;">';
+    h += '<div style="font-size:2rem;">'+aFlag+'</div>';
+    h += '<div style="font-size:.68rem;font-weight:700;text-transform:uppercase;text-align:center;color:#2D3557;">'+game.away+'</div>';
+    h += '</div>';
+
+    h += '</div>'; // teams row
+
+    // Footer
+    h += '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">';
+    if (hasBet && !isFinished && !canBet) {
+      h += '<span style="font-size:.72rem;font-weight:700;color:#16A34A;">✓ Aposta salva: '+bet.home_score+'×'+bet.away_score+'</span>';
+    } else if (!canBet && !hasBet && !isFinished) {
+      h += '<span style="font-size:.72rem;font-weight:700;color:#9CA3BF;">🔒 Encerrado</span>';
+    } else if (canBet) {
+      h += '<span style="font-size:.7rem;color:#9CA3BF;">⏰ Fecha 1h antes</span>';
+    } else { h += '<span></span>'; }
+
+    if (canBet) {
+      h += '<button data-savebet="'+game.id+'" style="padding:7px 16px;background:#1B2B6B;color:white;border:none;border-radius:8px;font-size:.8rem;font-weight:700;cursor:pointer;">💾 Salvar</button>';
+    }
+    h += '</div>';
+
+    h += '</div></div>'; // padding + card
+    return h;
+  }
+
   render();
   if (window.syncBetsFromSupabase) window.syncBetsFromSupabase().then(function(){ if(SPA.current==='apostas') render(); });
 })();
