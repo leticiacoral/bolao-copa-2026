@@ -3140,40 +3140,42 @@ SPA.pages["apostas"]={style:`.phase-section { margin-bottom: 28px; }
 
     pc.innerHTML = h;
 
-    // Event delegation — handles ALL clicks
-    pc.addEventListener('click', function(e){
-      // Filter buttons
-      var fb = e.target.closest('[data-betfilter]');
-      if (fb) { currentFilter = fb.getAttribute('data-betfilter'); render(); return; }
-
-      // Score buttons + and -
-      var sb = e.target.closest('[data-score]');
-      if (sb) {
-        var info = sb.getAttribute('data-score').split('|');
-        var gameId=info[0], side=info[1], delta=parseInt(info[2]);
-        var inp = document.getElementById('score-'+side+'-'+gameId);
-        if (inp) { inp.value = Math.max(0, Math.min(20, (parseInt(inp.value)||0)+delta)); }
-        return;
-      }
-
-      // Save bet button
-      var saveBtn = e.target.closest('[data-savebet]');
-      if (saveBtn) {
-        var gameId = saveBtn.getAttribute('data-savebet');
-        var h_el = document.getElementById('score-home-'+gameId);
-        var a_el = document.getElementById('score-away-'+gameId);
-        if (!h_el||!a_el) return;
-        var hv=h_el.value, av=a_el.value;
-        if(hv===''||av===''){Utils.toast('Informe o placar completo!','error');return;}
-        var game = DB.getGames().find(function(g){return g.id===gameId;});
-        if(!game||!Utils.canBet(game)){Utils.toast('Apostas encerradas para este jogo.','error');return;}
-        DB.saveBet(user.id||user.email, gameId, {home_score:parseInt(hv),away_score:parseInt(av)});
-        Utils.toast('Aposta salva: '+game.home+' '+hv+'×'+av+' '+game.away+' ✓','success');
-        render();
-        return;
-      }
-    });
   }
+
+  // Event delegation — added ONCE outside render()
+  pc.addEventListener('click', function(e){
+    // Filter buttons
+    var fb = e.target.closest('[data-betfilter]');
+    if (fb) { currentFilter = fb.getAttribute('data-betfilter'); render(); return; }
+
+    // Score buttons + and -
+    var sb = e.target.closest('[data-score]');
+    if (sb) {
+      var info = sb.getAttribute('data-score').split('|');
+      var gameId=info[0], side=info[1], delta=parseInt(info[2]);
+      var inp = document.getElementById('score-'+side+'-'+gameId);
+      if (inp) { inp.value = Math.max(0, Math.min(20, (parseInt(inp.value)||0)+delta)); }
+      return;
+    }
+
+    // Save bet button
+    var saveBtn = e.target.closest('[data-savebet]');
+    if (saveBtn) {
+      var gameId = saveBtn.getAttribute('data-savebet');
+      var h_el = document.getElementById('score-home-'+gameId);
+      var a_el = document.getElementById('score-away-'+gameId);
+      if (!h_el||!a_el) return;
+      var hv=h_el.value, av=a_el.value;
+      if(hv===''||av===''){Utils.toast('Informe o placar completo!','error');return;}
+      var game = DB.getGames().find(function(g){return g.id===gameId;});
+      if(!game||!Utils.canBet(game)){Utils.toast('Apostas encerradas para este jogo.','error');return;}
+      DB.saveBet(user.email||user.id, gameId, {home_score:parseInt(hv),away_score:parseInt(av)});
+      Utils.toast('Aposta salva: '+game.home+' '+hv+'×'+av+' '+game.away+' ✓','success');
+      render();
+      return;
+    }
+  });
+
 
   function sCard(label, val, color) {
     return '<div style="background:white;border-radius:12px;border:1px solid #DDE1EE;padding:14px 16px;box-shadow:0 1px 3px rgba(27,43,107,.08);">' +
