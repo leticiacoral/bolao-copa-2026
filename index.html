@@ -3141,8 +3141,8 @@ SPA.pages["apostas"]={style:`.phase-section { margin-bottom: 28px; }
 
   }
 
-  // Event delegation — added ONCE, uses getPC() to find container
-  document.addEventListener('click', function(e){
+  // Event delegation — use named function so we can remove/re-add safely
+  function _apostasClickHandler(e) {
     if (SPA.current !== 'apostas') return;
     // Filter buttons
     var fb = e.target.closest('[data-betfilter]');
@@ -3174,7 +3174,7 @@ SPA.pages["apostas"]={style:`.phase-section { margin-bottom: 28px; }
       render();
       return;
     }
-  });
+  }
 
 
   function sCard(label, val, color) {
@@ -3294,6 +3294,9 @@ SPA.pages["apostas"]={style:`.phase-section { margin-bottom: 28px; }
     return h;
   }
 
+  // Remove any previous listener before adding (prevents accumulation)
+  document.removeEventListener('click', _apostasClickHandler);
+  document.addEventListener('click', _apostasClickHandler);
   render();
   if (window.syncBetsFromSupabase) window.syncBetsFromSupabase().then(function(){ if(SPA.current==='apostas') render(); });
 })();
