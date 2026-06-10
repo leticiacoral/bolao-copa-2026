@@ -967,7 +967,8 @@ const DB = {
     const finalResults = this.getFinalResults();
 
     return users.map(user => {
-      const userBets = bets[user.id] || {};
+      // Try email first (primary key), then id
+      const userBets = bets[user.email] || bets[user.id] || {};
       let totalPts = 0, exactScores = 0, correctWinners = 0, betCount = 0;
       let totalBetTime = 0;
 
@@ -982,7 +983,7 @@ const DB = {
         totalBetTime += bet.savedAt || 0;
       });
 
-      const specials = this.getUserSpecials(user.id);
+      const specials = this.getUserSpecials(user.email || user.id);
       if (finalResults) totalPts += Scoring.calculateSpecials(specials, finalResults);
 
       const avgBetTime = betCount > 0 ? Math.round(totalBetTime / betCount) : 0;
@@ -5363,13 +5364,13 @@ SPA.pages["apostas_dia"]={style:"",script:function(){
       var upcoming = realGames
         .filter(function(g){ return new Date(g.date) >= today; })
         .sort(function(a,b){ return new Date(a.date)-new Date(b.date); })
-        .slice(0,3);
+        .slice(0,15);
 
-      // If still before Copa starts, show first 3 games of the tournament
+      // If still before Copa starts, show first 15 games of the tournament
       if (upcoming.length === 0) {
         upcoming = realGames
           .sort(function(a,b){ return new Date(a.date)-new Date(b.date); })
-          .slice(0,3);
+          .slice(0,15);
         displayLabel = '📋 Primeiros Jogos da Copa — Apostas Registradas';
       } else {
         var nextDate = upcoming[0].date.slice(0,10);
@@ -5456,11 +5457,11 @@ SPA.pages["apostas_dia"]={style:"",script:function(){
 
       // Bets table
       var betters = users.filter(function(u){
-        var ub = allBets[u.id] || allBets[u.email] || {};
+        var ub = allBets[u.email] || allBets[u.id] || {};
         return !!ub[game.id];
       });
       var noBet = users.filter(function(u){
-        var ub = allBets[u.id] || allBets[u.email] || {};
+        var ub = allBets[u.email] || allBets[u.id] || {};
         return !ub[game.id];
       });
 
@@ -5497,7 +5498,7 @@ SPA.pages["apostas_dia"]={style:"",script:function(){
         });
 
         betters.forEach(function(u){
-          var ub = allBets[u.id] || allBets[u.email] || {};
+          var ub = allBets[u.email] || allBets[u.id] || {};
           var bet = ub[game.id];
           var isMe = u.email === user.email;
           var pts = null;
