@@ -100,9 +100,7 @@ img { max-width: 100%; }
   transition: transform 0.3s ease;
 }
 
-.sidebar-logo {
-  display: none;
-}
+.sidebar-logo { display: none; }
 
 .sidebar-logo img {
   display: none;
@@ -3293,11 +3291,8 @@ SPA.pages["apostas"]={style:`.phase-section { margin-bottom: 28px; }
     return h;
   }
 
-  // Sync bets from Supabase before rendering
-  (async function() {
-    if (window.syncBetsFromSupabase) await window.syncBetsFromSupabase();
-    render();
-  })();
+  render();
+  if (window.syncBetsFromSupabase) window.syncBetsFromSupabase().then(function(){ if(SPA.current==='apostas') render(); });
 })();
 
 
