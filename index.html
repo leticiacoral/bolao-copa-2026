@@ -3063,6 +3063,8 @@ SPA.pages["apostas"]={style:`.phase-section { margin-bottom: 28px; }
   var user = Auth.user;
   var currentFilter = 'all';
 
+  function getPC() { return document.getElementById('pageContent'); }
+
   function render() {
     var games = DB.getGames().slice().sort(function(a,b){
       return new Date(a.date).getTime() - new Date(b.date).getTime();
@@ -3139,8 +3141,9 @@ SPA.pages["apostas"]={style:`.phase-section { margin-bottom: 28px; }
 
   }
 
-  // Event delegation — added ONCE outside render()
-  pc.addEventListener('click', function(e){
+  // Event delegation — added ONCE, uses getPC() to find container
+  document.addEventListener('click', function(e){
+    if (SPA.current !== 'apostas') return;
     // Filter buttons
     var fb = e.target.closest('[data-betfilter]');
     if (fb) { currentFilter = fb.getAttribute('data-betfilter'); render(); return; }
