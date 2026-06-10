@@ -5364,13 +5364,13 @@ SPA.pages["apostas_dia"]={style:"",script:function(){
       var upcoming = realGames
         .filter(function(g){ return new Date(g.date) >= today; })
         .sort(function(a,b){ return new Date(a.date)-new Date(b.date); })
-        .slice(0,15);
+        .slice(0,3);
 
-      // If still before Copa starts, show first 15 games of the tournament
+      // If still before Copa starts, show first 3 games of the tournament
       if (upcoming.length === 0) {
         upcoming = realGames
           .sort(function(a,b){ return new Date(a.date)-new Date(b.date); })
-          .slice(0,15);
+          .slice(0,3);
         displayLabel = '📋 Primeiros Jogos da Copa — Apostas Registradas';
       } else {
         var nextDate = upcoming[0].date.slice(0,10);
