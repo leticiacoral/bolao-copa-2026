@@ -5484,19 +5484,26 @@ SPA.pages["apostas_dia"]={style:"",script:function(){
         h += '<div style="padding:18px;text-align:center;font-size:.82rem;color:#9CA3BF;font-style:italic;">Nenhuma aposta registrada ainda para este jogo</div>';
       } else {
         // Table header
-        h += '<div style="overflow-x:auto;">';
+        h += '<div style="overflow-x:auto;max-height:400px;overflow-y:auto;">';
         h += '<table style="width:100%;border-collapse:collapse;min-width:400px;">';
         h += '<thead><tr style="border-bottom:1.5px solid #EEF0F6;">';
-        h += '<th style="padding:8px 14px;font-size:.62rem;font-weight:700;text-transform:uppercase;color:#9CA3BF;text-align:left;background:#FAFAFA;">Participante</th>';
-        h += '<th style="padding:8px 12px;font-size:.62rem;font-weight:700;text-transform:uppercase;color:#9CA3BF;text-align:center;background:#FAFAFA;">Empresa</th>';
-        h += '<th style="padding:8px 12px;font-size:.62rem;font-weight:700;text-transform:uppercase;color:#9CA3BF;text-align:center;background:#FAFAFA;">Palpite</th>';
-        h += '<th style="padding:8px 12px;font-size:.62rem;font-weight:700;text-transform:uppercase;color:#9CA3BF;text-align:center;background:#FAFAFA;">Status</th>';
+        h += '<th style="position:sticky;top:0;padding:8px 14px;font-size:.62rem;font-weight:700;text-transform:uppercase;color:#9CA3BF;text-align:left;background:#FAFAFA;z-index:1;">Participante</th>';
+        h += '<th style="position:sticky;top:0;padding:8px 12px;font-size:.62rem;font-weight:700;text-transform:uppercase;color:#9CA3BF;text-align:center;background:#FAFAFA;z-index:1;">Empresa</th>';
+        h += '<th style="position:sticky;top:0;padding:8px 12px;font-size:.62rem;font-weight:700;text-transform:uppercase;color:#9CA3BF;text-align:center;background:#FAFAFA;z-index:1;">Palpite</th>';
+        h += '<th style="position:sticky;top:0;padding:8px 12px;font-size:.62rem;font-weight:700;text-transform:uppercase;color:#9CA3BF;text-align:center;background:#FAFAFA;z-index:1;">Status</th>';
         h += '</tr></thead><tbody>';
 
         // Sort betters by company then name
         betters.sort(function(a,b){
-          if(a.company < b.company) return -1;
-          if(a.company > b.company) return 1;
+          // If game finished, sort by points desc
+          if (game.result) {
+            var ubA = allBets[a.email] || allBets[a.id] || {};
+            var ubB = allBets[b.email] || allBets[b.id] || {};
+            var betA = ubA[game.id], betB = ubB[game.id];
+            var ptsA = betA ? Scoring.calculate(betA, {home_score:game.result.home_score, away_score:game.result.away_score, phase:game.phase}).total : 0;
+            var ptsB = betB ? Scoring.calculate(betB, {home_score:game.result.home_score, away_score:game.result.away_score, phase:game.phase}).total : 0;
+            if (ptsB !== ptsA) return ptsB - ptsA;
+          }
           return a.name.localeCompare(b.name);
         });
 
